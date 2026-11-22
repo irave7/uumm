@@ -147,16 +147,17 @@ final class AppController: Sendable {
         screenshots.expire()
         let wallClock = Date()
         let transitions = session.update(remotes.map { RemoteReading(remote: $0.identity, observation: $0.sample(wallClock: wallClock)) }, now: now)
-        handle(transitions)
         if !preview {
             let config = store.config
-            let phoneScreens = config.screens.filter { $0.enabled && $0.orientation == .portrait && $0.device.kind == .phone }
-            let target = config.mainScreen == nil && phoneScreens.count == 1
-                ? state.desks.desks[phoneScreens[0].id]?.display : nil
-            let name = config.autoSwitchPhone && state.accessibilityTrusted ? config.autoSwitchPhoneName : nil
-            phoneSwitch.observe(adapter: remotes.compactMap { $0 as? UURemoteAdapter }.first,
+            let phone = ScreenPlan.automaticPhone(in: config)
+            let target = phone.flatMap { state.desks.desks[$0]?.display }
+            let isUU = session.isConnected && session.owner == UURemoteAdapter.identity
+            let adapter = isUU ? remotes.compactMap { $0 as? UURemoteAdapter }.first : nil
+            let name = phone != nil && state.accessibilityTrusted ? config.autoSwitchPhoneName : nil
+            phoneSwitch.observe(adapter: adapter,
                                 registeredPhone: name, target: target, transitions: transitions)
         }
+        handle(transitions)
         keepPointerOffSnugScreens()
         if now.timeIntervalSince(lastVerifyAt) >= Self.verifyInterval {
             lastVerifyAt = now
@@ -204,7 +205,11 @@ final class AppController: Sendable {
 
     /// 按此刻的配置和会话算出要哪些屏，交给 DeskSet（结论没变就什么都不做）
     func applyPlan() {
-        desks.setWishes(ScreenPlan.wishes(config: store.config, remote: session.inEpisode, trusted: state.accessibilityTrusted, preview: preview))
+        let config = store.config
+        let automaticPhoneAllowed = session.owner != UURemoteAdapter.identity ||
+            phoneSwitch.mayShowPhoneDisplay(named: config.autoSwitchPhoneName)
+        desks.setWishes(ScreenPlan.wishes(config: config, remote: session.inEpisode, trusted: state.accessibilityTrusted,
+                                         preview: preview, automaticPhoneAllowed: automaticPhoneAllowed))
     }
 
     /// 权限是用户在系统设置里给的，随时会变：刚给上时把上次没放回去的窗口放回去

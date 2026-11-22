@@ -341,7 +341,7 @@ struct RemoteOptimizationPage: View {
             } header: {
                 Text("手机远控")
             } footer: {
-                Text("填入手机在 UU「本机被控中」显示的完整名称。启用一块竖屏手机屏，并将「设为主屏」选为「不改」。切换时 Mac 原屏会短暂熄灭，然后自动恢复。")
+                Text("填入 UU「本机被控中」显示的手机全名，启用一块手机竖屏，并将「设为主屏」选为「不改」。确认这台手机后才会创建竖屏。切换时 Mac 原屏可能短暂熄灭。")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

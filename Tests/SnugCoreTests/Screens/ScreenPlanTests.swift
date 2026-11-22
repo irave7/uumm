@@ -35,6 +35,28 @@ struct ScreenPlanTests {
         #expect(ScreenPlan.wishes(config: c, remote: false, trusted: false, preview: true).isEmpty)
     }
 
+    @Test("手机自动切屏须等控制端验证才提供手机屏；普通平板屏照常提供")
+    func automaticPhoneVisibility() {
+        var c = config()
+        c.autoSwitchPhone = true
+        c.autoSwitchPhoneName = "Registered iPhone"
+        c.screens[1].enabled = false
+        #expect(ScreenPlan.wishes(config: c, remote: true, trusted: true, automaticPhoneAllowed: false).isEmpty)
+        #expect(ScreenPlan.wishes(config: c, remote: true, trusted: true, automaticPhoneAllowed: true).map(\.id) == [.phone])
+        c.screens[1].enabled = true
+        #expect(ScreenPlan.wishes(config: c, remote: true, trusted: true, automaticPhoneAllowed: false).map(\.id) == [c.screens[1].id])
+    }
+
+    @Test("自动切屏的设备限制不影响手动选屏、常驻主屏或预览")
+    func manualAndPreviewVisibility() {
+        var c = config()
+        #expect(ScreenPlan.wishes(config: c, remote: true, trusted: true, automaticPhoneAllowed: false).first?.id == .phone)
+        c.autoSwitchPhone = true
+        #expect(ScreenPlan.wishes(config: c, remote: false, trusted: true, preview: true, automaticPhoneAllowed: false).first?.id == .phone)
+        c.mainScreen = .phone
+        #expect(ScreenPlan.wishes(config: c, remote: false, trusted: true, automaticPhoneAllowed: false).map(\.id) == [.phone])
+    }
+
     @Test("类别 → 行为：手机、平板是触屏，电脑不是；手势总开关不改行为（翻不翻译由界面层按开关定）")
     func behavior() {
         #expect(ScreenPlan.behavior(.phone) == .touchScreen)

@@ -23,7 +23,8 @@ version=$(tr -d '[:space:]' < VERSION)
 application='build/uumm.app'
 work_dir=$(mktemp -d)
 trap 'rm -rf -- "$work_dir"' EXIT
-staged_app="$work_dir/uumm.app"
+image_stage="$work_dir/image"
+staged_app="$image_stage/uumm.app"
 mkdir -p "$staged_app/Contents/MacOS" "$staged_app/Contents/Resources" build
 
 architectures=(--arch arm64 --arch x86_64)
@@ -60,13 +61,14 @@ rm -rf -- "$application"
 ditto --noextattr "$staged_app" "$application"
 if [[ "$1" == dmg ]]; then
   mkdir -p dist
-  ln -s /Applications "$work_dir/Applications"
-  cp -X LICENSE "$work_dir/LICENSE.txt"
-  cp -X Vendor/PermissionFlow/LICENSE "$work_dir/LICENSE-PermissionFlow.txt"
+  ln -s /Applications "$image_stage/Applications"
+  cp -X LICENSE "$image_stage/LICENSE.txt"
+  cp -X Vendor/PermissionFlow/LICENSE "$image_stage/LICENSE-PermissionFlow.txt"
   dmg="uumm-$version.dmg"
-  hdiutil create -quiet -volname uumm -srcfolder "$work_dir" -format UDZO -ov "dist/$dmg"
-  (cd dist && shasum -a 256 "$dmg" > "$dmg.sha256")
-  hdiutil verify -quiet "dist/$dmg"
+  hdiutil create -quiet -volname uumm -srcfolder "$image_stage" -format UDZO "$work_dir/$dmg"
+  hdiutil verify -quiet "$work_dir/$dmg"
+  (cd "$work_dir" && shasum -a 256 "$dmg" > "$dmg.sha256")
+  mv -f "$work_dir/$dmg" "$work_dir/$dmg.sha256" dist/
   print "dist/$dmg"
 else
   print "$application"

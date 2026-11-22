@@ -20,6 +20,8 @@ public struct AppConfig: Codable, Equatable, Sendable {
     public var zoomSteps = 2
     /// 是否已看过首次启动的欢迎页
     public var welcomed = false
+    /// 菜单栏图标可单独隐藏，后台功能继续运行。
+    public var showInMenuBar = true
     /// 从哪检查和下载更新。UU远程 的用户基本在国内，默认腾讯云
     public var updateSource = UpdateSource.tencent
     /// 上次运行的版本：和这次不一样说明刚换了版本，启动时弹「关于 Snug」
@@ -88,7 +90,7 @@ public struct AppConfig: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case screens, mainScreen, nextSerialBlock, phoneScreen, gestures, screenshot, zoomSteps, phone, welcomed, updateSource, lastVersion
-        case remoteWheelSync, autoSwitchPhone, autoSwitchPhoneName
+        case remoteWheelSync, autoSwitchPhone, autoSwitchPhoneName, showInMenuBar
     }
 
     // 每一项都有默认值：以后加字段、或者手改漏了某项，都不会让整份配置被判为损坏
@@ -127,6 +129,7 @@ public struct AppConfig: Codable, Equatable, Sendable {
         screenshot = try c.decodeIfPresent(Bool.self, forKey: .screenshot) ?? d.screenshot
         zoomSteps = try c.decodeIfPresent(Int.self, forKey: .zoomSteps).map { $0.clamped(to: Self.zoomStepsRange) } ?? d.zoomSteps
         welcomed = try c.decodeIfPresent(Bool.self, forKey: .welcomed) ?? d.welcomed
+        showInMenuBar = try c.decodeIfPresent(Bool.self, forKey: .showInMenuBar) ?? d.showInMenuBar
         // 不认识的更新源（更新的版本加的、降级回来）用默认值
         updateSource = (try? c.decodeIfPresent(UpdateSource.self, forKey: .updateSource)) ?? d.updateSource
         lastVersion = try? c.decodeIfPresent(Version.self, forKey: .lastVersion)
@@ -159,6 +162,7 @@ extension AppConfig {
         try c.encode(screenshot, forKey: .screenshot)
         try c.encode(zoomSteps, forKey: .zoomSteps)
         try c.encode(welcomed, forKey: .welcomed)
+        try c.encode(showInMenuBar, forKey: .showInMenuBar)
         try c.encode(updateSource, forKey: .updateSource)
         try c.encodeIfPresent(lastVersion, forKey: .lastVersion)
     }

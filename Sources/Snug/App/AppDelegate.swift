@@ -4,6 +4,7 @@
 // 刚换了版本（应用内更新后重新打开、手动替换）：弹「关于 Snug」，新版本号一眼可见
 import AppKit
 import SnugCore
+import SnugSystem
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -50,9 +51,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quitFlow.shouldTerminate(sender)
     }
 
-    /// 运行中再双击、点 Dock 里的 Snug：弹设置页。Snug 没有常驻窗口，不处理的话这一下看起来毫无反应
+    /// 从访达或聚焦重新打开 uumm 会显示设置，隐藏图标后仍能找回入口。
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        router.openSettings()
+        let display = controller.state.config.showInMenuBar ? nil :
+            NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) }?.displayID
+        router.openSettings(on: display)
         return false
     }
 

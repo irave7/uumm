@@ -7,7 +7,7 @@ import SwiftUI
 
 @MainActor
 final class StatusBarController: NSObject, NSMenuDelegate {
-    private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    private var item: NSStatusItem?
     private let state: AppState
     private let intents: any AppIntents
     private let navigation: any Navigation
@@ -17,25 +17,37 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         self.intents = intents
         self.navigation = navigation
         super.init()
+        refreshItem()
+    }
+
+    private func installItem() -> NSStatusItem {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         let menu = NSMenu()
         menu.delegate = self
         menu.autoenablesItems = false
         item.menu = menu
         item.button?.image = Self.icon
-        refreshButton()
+        self.item = item
+        return item
     }
 
     /// 菜单栏图标：SF Symbols，同原型（系统图标本身就是模板图，深色菜单栏自动反白）
     private static let icon: NSImage? = NSImage(systemSymbolName: "iphone.radiowaves.left.and.right", accessibilityDescription: "uumm")?
         .withSymbolConfiguration(.init(pointSize: 14, weight: .medium))
 
-    /// 屏都关着、没有权限时图标变灰；提示文字随状态变
-    private func refreshButton() {
+    /// 只在设置允许时创建状态项。隐藏后保留这一观察，随后可从设置重新显示。
+    private func refreshItem() {
         withObservationTracking {
+            guard state.config.showInMenuBar else {
+                if let item { NSStatusBar.system.removeStatusItem(item) }
+                item = nil
+                return
+            }
+            let item = item ?? installItem()
             item.button?.appearsDisabled = !state.config.screens.contains(where: \.enabled) || !state.accessibilityTrusted
             item.button?.toolTip = "uumm · \(StatusText(state).headline)"
         } onChange: { [weak self] in
-            DispatchQueue.main.async { MainActor.assumeIsolated { self?.refreshButton() } }
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.refreshItem() } }
         }
     }
 
@@ -92,7 +104,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     @objc private func quit() { intents.quit() }
 
     /// 点的是哪块屏的菜单栏：菜单栏图标跟着活动的那块屏走
-    private var clickedScreen: NSScreen? { item.button?.window?.screen }
+    private var clickedScreen: NSScreen? { item?.button?.window?.screen }
 }
 
 struct MenuStatusView: View {

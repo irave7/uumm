@@ -14,6 +14,7 @@ This release is ad-hoc signed and has not been notarized by Apple. macOS may blo
 
 ## Use
 
+- **Menu bar icon.** In Settings → 通用 (General), turn off 在菜单栏显示 (Show in Menu Bar). uumm continues running in the background. Reopen uumm from Applications or Spotlight to get back to Settings.
 - **Virtual displays and gestures.** Enable a virtual display in uumm and select it in UU Remote after connecting. The display includes an app library, window layout, and gestures for phones and tablets. The Mac's original display is the default main display.
 - **Automatic phone display switching.** In Settings → UU 优化 (UU enhancements), turn on 自动切屏 (Automatic switching). Enter the phone name exactly as it appears on UU Remote's local incoming-control page and save it. In Displays, enable a single portrait virtual phone display and retain the existing main display. When the specified phone is the only controller, UU Remote is streaming the original display, and the target display is online, uumm briefly disables the built-in screen so UU Remote switches to the virtual display, then restores the built-in main display. Other devices and unidentified controllers do not initiate a switch.
 - **Vertical wheel synchronization.** In Settings → UU 优化, turn on 同步纵向滚轮 (Sync vertical wheel). uumm combines macOS Natural Scrolling with the applicable LinearMouse vertical reversal, and uses lines per notch where the configuration can be matched. The local mouse and trackpad use their own settings. [LinearMouse](https://linearmouse.app/)

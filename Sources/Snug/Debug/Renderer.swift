@@ -73,6 +73,7 @@ final class RenderStub: AppIntents, TouchIntents, Navigation {
     func setAutoSwitchPhone(_ on: Bool) {}
     func setAutoSwitchPhoneName(_ name: String) {}
     func setZoomSteps(_ steps: Int) {}
+    func setShowInMenuBar(_ on: Bool) {}
     func setLaunchAtLogin(_ on: Bool) {}
     func openLoginItemsSettings() {}
     func markWelcomed() {}

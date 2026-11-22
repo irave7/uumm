@@ -31,6 +31,15 @@ struct PersistenceTests {
         #expect(try JSONDecoder().decode(AppConfig.self, from: encoded) == current)
     }
 
+    @Test("旧设置显示菜单栏图标，隐藏选项可以保存和读取")
+    func menuBarVisibility() throws {
+        var config = try JSONDecoder().decode(AppConfig.self, from: Data("{}".utf8))
+        #expect(config.showInMenuBar)
+        config.showInMenuBar = false
+        let encoded = try JSONEncoder().encode(config)
+        #expect(try JSONDecoder().decode(AppConfig.self, from: encoded) == config)
+    }
+
     @Test("JSONFile.load 区分不存在 / 损坏 / 成功")
     func loadStates() throws {
         let dir = try TempDir()

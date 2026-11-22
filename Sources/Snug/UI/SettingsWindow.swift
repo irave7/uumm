@@ -1,10 +1,6 @@
-// 设置窗口：macOS 设置窗口的样式，顶部工具栏分三页（界面以 design/prototype 为准）：
-// - 屏幕：此刻的远程状态，要处理的问题各一行；屏幕列表（开关、在看、ⓘ 进详情）、添加屏幕、设为主屏
-// - 触控：手势、字号放大、截图，写明只作用于手机和平板屏
-// - 通用：开机启动、权限、软件更新和更新源、退出 Snug
-// 只管某一块屏的（型号、名字、删除）放进那块屏的详情（见 ScreenSheets）。只读 AppState，意图走 AppIntents。
-// 说明文字：结论最多一行留在页面上，理由收进行末「为什么？」的气泡
+// 设置窗口：左侧切换屏幕、触控、UU 优化和通用设置，各页读取 AppState，通过 AppIntents 修改设置。
 import AppKit
+import Observation
 import PermissionFlow
 import SwiftUI
 import SnugCore
@@ -23,7 +19,15 @@ struct ScreensPage: View {
 
     var body: some View {
         Form {
-            Section { StatusHeader(state: state, navigation: navigation) }
+            Section {
+                StatusHeader(state: state, navigation: navigation)
+                if state.connection == .reconnecting {
+                    Button("立即结束本次远程") { intents.endSessionNow() }
+                }
+                if !state.libraryScreens.isEmpty {
+                    Button("App 资源库") { navigation.openLibrary(on: nil) }
+                }
+            }
             let issues = Issue.all(state, intents)
             if !issues.isEmpty {
                 Section { ForEach(issues) { IssueRow(issue: $0) } }
@@ -38,7 +42,7 @@ struct ScreensPage: View {
                     Text("还没有屏幕").foregroundStyle(.secondary)
                 }
             } header: {
-                Text("屏幕")
+                Text("虚拟屏幕")
             } footer: {
                 HStack(alignment: .firstTextBaseline, spacing: MacTokens.Space.s) {
                     HStack(spacing: MacTokens.Space.xs) {
@@ -73,8 +77,7 @@ struct ScreensPage: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: MacTokens.Size.settingsWidth)
-        .fixedSize(horizontal: false, vertical: true)
+        .scrollContentBackground(.hidden)
         .sheet(item: $sheet) { sheet in
             switch sheet {
             case .add: AddScreenSheet(state: state, intents: intents) { self.sheet = nil }
@@ -100,7 +103,7 @@ enum MainScreenNotice {
 
         影响：当前主屏上的窗口随即移至此屏；此后程序坞、新窗口、系统提示与锁屏登录框均显示于此屏，本机不可见。适用于未接显示器或仅远程使用的 Mac。
 
-        原因：UU远程 在连接时选定主屏，Snug 仅能在连接后察觉，须预先设定。可随时在 App 资源库或菜单栏取消。
+        UU远程 在连接时选定主屏。可随时在 App 资源库、菜单栏或 uumm 的设置中取消。
         """
 }
 
@@ -286,8 +289,7 @@ struct TouchPage: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: MacTokens.Size.settingsWidth)
-        .fixedSize(horizontal: false, vertical: true)
+        .scrollContentBackground(.hidden)
     }
 }
 
@@ -311,25 +313,23 @@ private struct ZoomSlider: View {
     }
 }
 
-// MARK: 通用
+// MARK: UU 优化
 
 struct RemoteOptimizationPage: View {
     let state: AppState
     let intents: any AppIntents
-    @State private var phoneName = ""
+    @Binding var phoneName: String
 
     var body: some View {
         Form {
-            Section("Windows 远控 Mac") {
-                Toggle("同步纵向滚轮", isOn: Binding(get: { state.config.remoteWheelSync }, set: { intents.setRemoteWheelSync($0) }))
-                Text("读取 Mac 的 LinearMouse 设置，校正 UU 发来的纵向滚轮。").foregroundStyle(.secondary)
-            }
-            Section("手机远控") {
+            Section {
                 Toggle("自动切屏", isOn: Binding(get: { state.config.autoSwitchPhone }, set: { intents.setAutoSwitchPhone($0) }))
                 LabeledContent("手机在 UU 中的设备名称") {
                     HStack {
                         TextField("设备名称", text: $phoneName)
                             .labelsHidden()
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 174)
                             .onSubmit(savePhoneName)
                         Button("保存", action: savePhoneName)
                             .disabled(phoneName == (state.config.autoSwitchPhoneName ?? "") || phoneName.count > 128)
@@ -338,15 +338,28 @@ struct RemoteOptimizationPage: View {
                 if state.controllers.count == 1, let connected = state.controllers.first, !connected.isEmpty {
                     Button("填入当前控制端名称") { phoneName = connected }
                 }
+            } header: {
+                Text("手机远控")
+            } footer: {
                 Text("填入手机在 UU「本机被控中」显示的完整名称。启用一块竖屏手机屏，并将「设为主屏」选为「不改」。切换时 Mac 原屏会短暂熄灭，然后自动恢复。")
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Section {
+                Toggle("同步纵向滚轮", isOn: Binding(get: { state.config.remoteWheelSync }, set: { intents.setRemoteWheelSync($0) }))
+            } header: {
+                Text("Windows 远控 Mac")
+            } footer: {
+                Text("读取 Mac 的 LinearMouse 设置，校正 UU 发来的纵向滚轮。")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .formStyle(.grouped)
-        .frame(width: MacTokens.Size.settingsWidth)
-        .fixedSize(horizontal: false, vertical: true)
-        .onAppear { phoneName = state.config.autoSwitchPhoneName ?? "" }
+        .scrollContentBackground(.hidden)
     }
 
     private func savePhoneName() {
@@ -355,15 +368,22 @@ struct RemoteOptimizationPage: View {
     }
 }
 
+// MARK: 通用
+
 struct GeneralPage: View {
     let state: AppState
     let intents: any AppIntents
+    let navigation: any Navigation
 
     var body: some View {
         Form {
-            Section {
+            Section("启动与显示") {
                 Toggle(isOn: Binding(get: { state.launchAtLogin }, set: { intents.setLaunchAtLogin($0) })) {
                     SettingLabel("开机启动", tile: MacTokens.IconTile.launchAtLogin)
+                }
+                Toggle(isOn: Binding(get: { state.config.showInMenuBar }, set: { intents.setShowInMenuBar($0) })) {
+                    SettingLabel("在菜单栏显示", detail: "隐藏后，从「应用程序」打开 uumm 可重新进入设置。",
+                                 symbol: "menubar.rectangle", tint: SettingsWorkspace.accent)
                 }
             }
             Section("权限") {
@@ -379,11 +399,9 @@ struct GeneralPage: View {
                 }
             }
             Section {
-                Link("GitHub Releases", destination: URL(string: "https://github.com/irave7/uumm/releases")!)
-            }
-            Section {
-            } footer: {
                 HStack {
+                    Button("关于 uumm") { navigation.openAbout(on: nil) }
+                    Link("查看 GitHub 发布版本", destination: URL(string: "https://github.com/irave7/uumm/releases")!)
                     Spacer()
                     Button("退出 uumm") { intents.quit() }
                         .help("还原窗口后退出")
@@ -391,18 +409,90 @@ struct GeneralPage: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: MacTokens.Size.settingsWidth)
-        .fixedSize(horizontal: false, vertical: true)
+        .scrollContentBackground(.hidden)
     }
 }
 
 // MARK: 窗口
 
-/// 设置窗口：三个标签页各是一个 SwiftUI 视图。NSTabViewController 自己会让窗口标题跟着当前页走，
-/// 高度跟着当前页的内容（切页、出现提示）变，左上角不动（实测）
+@MainActor @Observable
+final class SettingsSelection {
+    var tab: SettingsWindowController.Tab
+
+    init(_ tab: SettingsWindowController.Tab = .screens) { self.tab = tab }
+}
+
+struct SettingsWorkspace: View {
+    private static let sidebarWidth: CGFloat = 154
+    static let accent = Color(nsColor: .dynamic(
+        light: NSColor(srgbRed: 0.12, green: 0.35, blue: 0.81, alpha: 1),
+        dark: NSColor(srgbRed: 0.42, green: 0.65, blue: 1, alpha: 1)
+    ))
+    private static let sidebarBackground = Color(nsColor: .dynamic(
+        light: NSColor(srgbRed: 0.93, green: 0.95, blue: 0.98, alpha: 1),
+        dark: NSColor(srgbRed: 0.11, green: 0.14, blue: 0.19, alpha: 1)
+    ))
+
+    let state: AppState
+    let intents: any AppIntents
+    let navigation: any Navigation
+    let selection: SettingsSelection
+    @State private var phoneName: String
+
+    init(state: AppState, intents: any AppIntents, navigation: any Navigation, selection: SettingsSelection) {
+        self.state = state
+        self.intents = intents
+        self.navigation = navigation
+        self.selection = selection
+        _phoneName = State(initialValue: state.config.autoSwitchPhoneName ?? "")
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            List(selection: Binding(get: { Optional(selection.tab) }, set: { tab in
+                if let tab { selection.tab = tab }
+            })) {
+                ForEach(SettingsWindowController.Tab.allCases, id: \.self) { tab in
+                    Label(tab.title, systemImage: tab.symbol)
+                        .font(.system(size: 13, weight: selection.tab == tab ? .semibold : .medium))
+                        .padding(.vertical, 5)
+                        .tag(tab)
+                }
+            }
+            .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
+            .padding(.top, 14)
+            .frame(width: Self.sidebarWidth)
+            .background(Self.sidebarBackground)
+            .accessibilityLabel("设置分类")
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text(selection.tab.title)
+                    .font(.system(size: 23, weight: .semibold))
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+
+                switch selection.tab {
+                case .screens: ScreensPage(state: state, intents: intents, navigation: navigation)
+                case .touch: TouchPage(state: state, intents: intents)
+                case .optimization: RemoteOptimizationPage(state: state, intents: intents, phoneName: $phoneName)
+                case .general: GeneralPage(state: state, intents: intents, navigation: navigation)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(nsColor: .windowBackgroundColor))
+        }
+        .tint(Self.accent)
+        .frame(width: Self.sidebarWidth + MacTokens.Size.settingsWidth, height: 490)
+    }
+}
+
 @MainActor
 final class SettingsWindowController {
-    enum Tab: Int, CaseIterable {
+    enum Tab: CaseIterable {
         case screens, touch, optimization, general
 
         var title: String {
@@ -418,7 +508,7 @@ final class SettingsWindowController {
             switch self {
             case .screens: "rectangle.on.rectangle"
             case .touch: "hand.point.up.left"
-            case .optimization: "switch.2"
+            case .optimization: "iphone.gen3"
             case .general: "gearshape"
             }
         }
@@ -427,8 +517,8 @@ final class SettingsWindowController {
     private let state: AppState
     private let intents: any AppIntents
     private weak var navigation: (any Navigation)?
+    private let selection = SettingsSelection()
     private var window: NSWindow?
-    private var tabs: NSTabViewController?
 
     init(state: AppState, intents: any AppIntents, navigation: any Navigation) {
         self.state = state
@@ -438,42 +528,14 @@ final class SettingsWindowController {
 
     /// display：从哪块屏的菜单栏打开的（见 NSWindow.bring）
     func show(_ tab: Tab = .screens, on display: DisplayID? = nil, activating: Bool = true) {
+        selection.tab = tab
         if window == nil, let navigation {
-            let tabs = NSTabViewController()
-            tabs.tabStyle = .toolbar
-            for tab in Tab.allCases {
-                let view: AnyView = switch tab {
-                case .screens: AnyView(ScreensPage(state: state, intents: intents, navigation: navigation))
-                case .touch: AnyView(TouchPage(state: state, intents: intents))
-                case .optimization: AnyView(RemoteOptimizationPage(state: state, intents: intents))
-                case .general: AnyView(GeneralPage(state: state, intents: intents))
-                }
-                tabs.addTabViewItem(Self.item(tab, view))
-            }
-            // 先选好页再建窗口：窗口按这一页的大小建，居中才是正的
-            tabs.selectedTabViewItemIndex = tab.rawValue
-            let w = NSWindow(contentViewController: tabs)
-            w.styleMask = [.titled, .closable, .miniaturizable]
-            w.toolbarStyle = .preference
-            w.isReleasedWhenClosed = false
-            // 只在建好时居中：之后关了再开，还在用户拖到的地方
-            w.center()
-            self.tabs = tabs
+            let view = SettingsWorkspace(state: state, intents: intents, navigation: navigation, selection: selection)
+            let w = NSWindow(hosting: view, title: "uumm 设置")
+            w.styleMask.insert(.miniaturizable)
             window = w
-        } else {
-            tabs?.selectedTabViewItemIndex = tab.rawValue
         }
         window?.bring(to: display)
         window?.present(activating: activating)
-    }
-
-    private static func item(_ tab: Tab, _ view: some View) -> NSTabViewItem {
-        let hosting = NSHostingController(rootView: view)
-        hosting.sizingOptions = [.preferredContentSize]
-        hosting.title = tab.title   // 窗口标题跟着当前页走
-        let item = NSTabViewItem(viewController: hosting)
-        item.label = tab.title
-        item.image = NSImage(systemSymbolName: tab.symbol, accessibilityDescription: tab.title)
-        return item
     }
 }

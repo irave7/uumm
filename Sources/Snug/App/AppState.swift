@@ -121,6 +121,7 @@ protocol AppIntents: AnyObject, Sendable {
     func setAutoSwitchPhone(_ on: Bool)
     func setAutoSwitchPhoneName(_ name: String)
     func setZoomSteps(_ steps: Int)
+    func setShowInMenuBar(_ on: Bool)
     func setLaunchAtLogin(_ on: Bool)
     /// 开机启动待允许：直接打开系统设置的「登录项」
     func openLoginItemsSettings()

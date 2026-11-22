@@ -32,9 +32,12 @@ final class WindowRouter: Navigation {
         }
     }
 
-    /// 第一次打开：欢迎页关掉后记下「看过了」
+    /// 第一次打开：关掉欢迎页后进入设置，方便继续配置手机屏。
     func showFirstWelcome() {
-        welcome.show { [weak self] in self?.controller.markWelcomed() }
+        welcome.show { [weak self] in
+            self?.controller.markWelcomed()
+            self?.openSettings()
+        }
     }
 
     /// 旧版在运行：问清楚再开始监控（选哪个都会继续）

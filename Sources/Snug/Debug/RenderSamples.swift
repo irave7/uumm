@@ -99,10 +99,14 @@ enum RenderSamples {
             },
             page("settings-touch", tab: .touch) { _ in },
             page("settings-touch-dark", dark: true, tab: .touch) { s in s.config.screenshot = true },
-            page("settings-general", tab: .general) { s in s.update.check = .upToDate },
+            page("settings-optimization", tab: .optimization) { s in
+                connected(s)
+                s.config.autoSwitchPhone = true
+                s.config.autoSwitchPhoneName = s.controllers.first
+            },
+            page("settings-general", tab: .general) { _ in },
             page("settings-general-dark", dark: true, tab: .general) { s in s.screenRecordingTrusted = true },
-            page("settings-general-update-available", tab: .general) { s in s.update.check = .available(sampleFeed) },
-            page("settings-general-too-old", tab: .general) { s in s.update.problem = .tooOld },
+            page("settings-general-menu-bar-hidden", tab: .general) { s in s.config.showInMenuBar = false },
             RenderSample(name: "settings-add-screen") {
                 AnyView(AddScreenSheet(state: sampleState(), intents: stub, close: {}))
             },
@@ -120,15 +124,10 @@ enum RenderSamples {
 
     private static func page(_ name: String, dark: Bool = false, tab: SettingsWindowController.Tab = .screens,
                              _ configure: @escaping @MainActor (AppState) -> Void) -> RenderSample {
-        RenderSample(name: name, dark: dark) {
+        RenderSample(name: name, dark: dark, inWindow: true) {
             let s = sampleState()
             configure(s)
-            return switch tab {
-            case .screens: AnyView(ScreensPage(state: s, intents: stub, navigation: stub))
-            case .touch: AnyView(TouchPage(state: s, intents: stub))
-            case .general: AnyView(GeneralPage(state: s, intents: stub))
-            case .optimization: AnyView(RemoteOptimizationPage(state: s, intents: stub))
-            }
+            return AnyView(SettingsWorkspace(state: s, intents: stub, navigation: stub, selection: SettingsSelection(tab)))
         }
     }
 
@@ -203,11 +202,7 @@ enum RenderSamples {
                 u.problem = .cannotReplace
             }),
         ].map { name, dark, configure in
-            RenderSample(name: name, dark: dark) {
-                let s = sampleState()
-                configure(&s.update)
-                return AnyView(GeneralPage(state: s, intents: stub))
-            }
+            page(name, dark: dark, tab: .general) { configure(&$0.update) }
         }
     }
 

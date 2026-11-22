@@ -91,6 +91,10 @@ extension AppController: AppIntents {
         desks.setDefaultZoom(steps)
     }
 
+    func setShowInMenuBar(_ on: Bool) {
+        changeConfig("在菜单栏显示 → \(on ? "开" : "关")") { $0.showInMenuBar = on }
+    }
+
     /// 打开没成时写明原因：在「登录项」里被关过（系统要用户去那里允许）、不在「应用程序」里，还是别的
     func setLaunchAtLogin(_ on: Bool) {
         var failed = false

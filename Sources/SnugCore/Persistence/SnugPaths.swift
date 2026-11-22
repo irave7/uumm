@@ -10,12 +10,12 @@ public struct SnugPaths: Equatable, Sendable {
         self.logFile = logFile
     }
 
-    /// ~/Library/Application Support/Snug/ 与 ~/Library/Logs/Snug.log
+    /// uumm 使用独立的设置、日志与恢复记录。
     public static var standard: SnugPaths {
         let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
         return SnugPaths(
-            dataDirectory: library.appendingPathComponent("Application Support/Snug", isDirectory: true),
-            logFile: library.appendingPathComponent("Logs/Snug.log"))
+            dataDirectory: library.appendingPathComponent("Application Support/uumm", isDirectory: true),
+            logFile: library.appendingPathComponent("Logs/uumm.log"))
     }
 
     /// 用户设置

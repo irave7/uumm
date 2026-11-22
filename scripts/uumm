@@ -1,0 +1,73 @@
+#!/bin/zsh
+set -euo pipefail
+cd "${0:A:h}/.."
+
+if [[ -z "${DEVELOPER_DIR:-}" && -d /Applications/Xcode.app/Contents/Developer ]]; then
+  selected_developer_dir=$(xcode-select -p 2>/dev/null || true)
+  if [[ "$selected_developer_dir" != *.app/Contents/Developer ]]; then
+    export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  fi
+fi
+
+case "${1:-help}" in
+  check)
+    swift test
+    exit
+    ;;
+  app|dmg) ;;
+  *) print '用法：scripts/uumm check | app | dmg'; exit ;;
+esac
+
+version=$(tr -d '[:space:]' < VERSION)
+[[ "$version" =~ '^[0-9]+\.[0-9]+\.[0-9]+$' ]]
+application='build/uumm.app'
+work_dir=$(mktemp -d)
+trap 'rm -rf -- "$work_dir"' EXIT
+staged_app="$work_dir/uumm.app"
+mkdir -p "$staged_app/Contents/MacOS" "$staged_app/Contents/Resources" build
+
+architectures=(--arch arm64 --arch x86_64)
+if [[ "${UUMM_NATIVE_ONLY:-0}" == 1 ]]; then architectures=(); fi
+swift build -c release --product uumm "${architectures[@]}"
+binary_dir=$(swift build -c release "${architectures[@]}" --show-bin-path)
+cp -X "$binary_dir/uumm" "$staged_app/Contents/MacOS/uumm"
+ditto --noextattr "$binary_dir/PermissionFlow_PermissionFlow.bundle" "$staged_app/Contents/Resources/PermissionFlow_PermissionFlow.bundle"
+cp -X Assets/AppIcon/AppIcon.icns Assets/device-models.json LICENSE "$staged_app/Contents/Resources/"
+cp -X Vendor/PermissionFlow/LICENSE "$staged_app/Contents/Resources/LICENSE-PermissionFlow"
+cat > "$staged_app/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>io.github.irave7.uumm</string>
+<key>CFBundleName</key><string>uumm</string>
+<key>CFBundleDisplayName</key><string>uumm</string>
+<key>CFBundleExecutable</key><string>uumm</string>
+<key>CFBundleIconFile</key><string>AppIcon</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleShortVersionString</key><string>$version</string>
+<key>CFBundleVersion</key><string>$version</string>
+<key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
+<key>CFBundleLocalizations</key><array><string>zh-Hans</string></array>
+<key>LSMinimumSystemVersion</key><string>14.0</string>
+<key>LSUIElement</key><true/>
+<key>NSHighResolutionCapable</key><true/>
+<key>NSHumanReadableCopyright</key><string>© 2026 AoyamaShou and zephyr4123 · MIT</string>
+</dict></plist>
+PLIST
+codesign --force --sign - "$staged_app"
+codesign --verify --strict --deep "$staged_app"
+rm -rf -- "$application"
+ditto --noextattr "$staged_app" "$application"
+if [[ "$1" == dmg ]]; then
+  mkdir -p dist
+  ln -s /Applications "$work_dir/Applications"
+  cp -X LICENSE "$work_dir/LICENSE.txt"
+  cp -X Vendor/PermissionFlow/LICENSE "$work_dir/LICENSE-PermissionFlow.txt"
+  dmg="uumm-$version.dmg"
+  hdiutil create -quiet -volname uumm -srcfolder "$work_dir" -format UDZO -ov "dist/$dmg"
+  (cd dist && shasum -a 256 "$dmg" > "$dmg.sha256")
+  hdiutil verify -quiet "dist/$dmg"
+  print "dist/$dmg"
+else
+  print "$application"
+fi

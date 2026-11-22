@@ -69,6 +69,9 @@ final class RenderStub: AppIntents, TouchIntents, Navigation {
     func renameScreen(_ id: ScreenID, _ name: String) {}
     func setMainScreen(_ id: ScreenID?) {}
     func setGestures(_ on: Bool) {}
+    func setRemoteWheelSync(_ on: Bool) {}
+    func setAutoSwitchPhone(_ on: Bool) {}
+    func setAutoSwitchPhoneName(_ name: String) {}
     func setZoomSteps(_ steps: Int) {}
     func setLaunchAtLogin(_ on: Bool) {}
     func openLoginItemsSettings() {}

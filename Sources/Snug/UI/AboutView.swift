@@ -1,4 +1,4 @@
-// 「关于 Snug」：独立的小窗口，只放名称、版本、链接、致谢与免责声明（软件更新在设置的通用页）
+// 「关于 uumm」集中显示版本、项目链接与上游致谢。
 import AppKit
 import SwiftUI
 import SnugCore
@@ -10,8 +10,10 @@ struct AboutView: View {
     }
 
     private let credits = [
+        Credit(name: "Snug", url: "https://github.com/zephyr4123/snug",
+               author: "zephyr4123", usage: "上游项目"),
         Credit(name: "UUyc-companion", url: "https://github.com/aoyamashou/UUyc-companion",
-               author: "AoyamaShou", usage: "项目前身"),
+               author: "AoyamaShou", usage: "Snug 的前身"),
         Credit(name: "PermissionFlow", url: "https://github.com/jaywcjlove/PermissionFlow",
                author: "小弟调调（jaywcjlove）", usage: "授权引导"),
         Credit(name: "Better Remote", url: "https://github.com/pincc-debug/better-remote",
@@ -29,11 +31,11 @@ struct AboutView: View {
                         .frame(width: 64, height: 64)
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text("Snug").font(.title2.bold())
+                            Text("uumm").font(.title2.bold())
                             Text(Updater.current?.description ?? "开发版").foregroundStyle(.secondary).monospacedDigit()
                         }
-                        Text("远程 Mac 的显示与触控增强")
-                        Link("github.com/zephyr4123/snug", destination: URL(string: "https://github.com/zephyr4123/snug")!)
+                        Text("为 UU 远程连接提供屏幕、触控和滚轮设置")
+                        Link("GitHub 发布页", destination: URL(string: "https://github.com/irave7/uumm/releases")!)
                     }
                 }
                 .padding(.vertical, 4)
@@ -70,7 +72,7 @@ final class AboutWindowController {
     func show(on display: DisplayID? = nil, activating: Bool = true) {
         if window == nil {
             // 先定尺寸再居中（NSWindow(hosting:)），否则按 0×0 居中，窗口偏到右下
-            let w = NSWindow(hosting: AboutView(), title: "关于 Snug")
+            let w = NSWindow(hosting: AboutView(), title: "关于 uumm")
             w.titlebarAppearsTransparent = true
             window = w
         }

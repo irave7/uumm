@@ -65,6 +65,20 @@ extension AppController: AppIntents {
         syncGestures()
     }
 
+    func setRemoteWheelSync(_ on: Bool) {
+        changeConfig("纵向滚轮同步 → \(on ? "开" : "关")") { $0.remoteWheelSync = on }
+    }
+
+    func setAutoSwitchPhone(_ on: Bool) {
+        changeConfig("手机自动切屏 → \(on ? "开" : "关")") { $0.autoSwitchPhone = on }
+    }
+
+    func setAutoSwitchPhoneName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count <= 128 else { return }
+        changeConfig("修改用于自动切屏的设备名称") { $0.autoSwitchPhoneName = trimmed.isEmpty ? nil : trimmed }
+    }
+
     /// 关掉时把浮着的截图一并收掉
     func setScreenshot(_ on: Bool) {
         guard changeConfig("截图键 → \(on ? "开" : "关")", { $0.screenshot = on }) else { return }
@@ -122,9 +136,9 @@ extension AppController: AppIntents {
 
     func quit() { onQuitRequested?() }
 
-    func checkForUpdates() { updater.check(userInitiated: true) }
+    func checkForUpdates() { openDownloadPage() }
 
-    func installUpdate() { updater.install() }
+    func installUpdate() { openDownloadPage() }
 
     /// 换了更新源，上一个源连不上之类的提示就不作数了
     func setUpdateSource(_ source: UpdateSource) {
@@ -132,7 +146,7 @@ extension AppController: AppIntents {
         state.update.problem = nil
     }
 
-    func openDownloadPage() { NSWorkspace.shared.open(state.config.updateSource.downloadPage) }
+    func openDownloadPage() { NSWorkspace.shared.open(URL(string: "https://github.com/irave7/uumm/releases")!) }
 
     // MARK: 退出收尾
 

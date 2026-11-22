@@ -2,9 +2,10 @@
 import PackageDescription
 
 let package = Package(
-    name: "Snug",
+    name: "uumm",
     platforms: [.macOS(.v14)],
     products: [
+        .executable(name: "uumm", targets: ["Snug"]),
         .executable(name: "snug-release", targets: ["SnugRelease"]),
     ],
     dependencies: [

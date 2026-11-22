@@ -1,5 +1,4 @@
-// 欢迎页：第一次打开时出现，系统引导页的样子：顶部 App 图标，三项讲清 Snug 怎么用，底部「稍后 / 授权…」。
-// 授权由 PermissionFlow 打开系统设置，旁边浮出一个小窗口，把 Snug 拖进列表即可。之后缺权限时从设置里也能再打开。
+// 欢迎页说明 uumm 的主要功能和授权入口。
 // 授权状态读 AppState（AppController 每拍刷新），这里不自己轮询
 import AppKit
 import SwiftUI
@@ -16,13 +15,13 @@ struct WelcomeView: View {
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
                     .frame(width: 80, height: 80)
-                Text("欢迎使用 Snug").font(.largeTitle.bold())
-                Text("远程 Mac 的显示与触控增强").foregroundStyle(.secondary)
+                Text("欢迎使用 uumm").font(.largeTitle.bold())
+                Text("为 UU 远程连接设置屏幕、触控和滚轮").foregroundStyle(.secondary)
             }
             VStack(alignment: .leading, spacing: 20) {
-                Feature(symbol: "rectangle.on.rectangle", title: "选择 Snug 的屏", detail: "UU远程 屏幕列表中切换；不切换则一切如常")
-                Feature(symbol: "hand.point.up.left.fill", title: "点选 App 或窗口", detail: "铺满这块屏，手机和平板上字号自动放大")
-                Feature(symbol: "hand.draw.fill", title: "触控手势", detail: "单指滚动 · 长按选择 · 长按松开右键")
+                Feature(symbol: "rectangle.on.rectangle", title: "使用远程虚拟屏", detail: "在 UU 的屏幕列表选屏，手机和平板可铺满窗口")
+                Feature(symbol: "iphone.radiowaves.left.and.right", title: "指定手机自动切屏", detail: "填写手机名称，并启用一块手机竖屏")
+                Feature(symbol: "computermouse", title: "同步远程滚轮", detail: "让 UU 的纵向滚轮沿用 Mac 的 LinearMouse 设置")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack {
@@ -85,7 +84,7 @@ final class WelcomeWindowController {
                 self?.window?.close()
             }))
             w.styleMask = [.titled, .closable]
-            w.title = "Snug"
+            w.title = "uumm"
             w.isReleasedWhenClosed = false
             w.center()
             closeObserver = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w,

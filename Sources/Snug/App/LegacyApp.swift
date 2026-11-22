@@ -4,28 +4,24 @@ import SnugCore
 
 @MainActor
 enum LegacyApp {
-    nonisolated static let bundleID = "com.corndog.uudisplay"
+    nonisolated private static let conflictingIDs = [
+        "com.corndog.uudisplay", "com.zephyr4123.snug",
+        "local.uuremote.scrollsync", "local.uuremote.phonescreenswitch",
+    ]
 
-    static var isRunning: Bool { !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty }
+    private static var running: [NSRunningApplication] {
+        conflictingIDs.flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
+    }
+
+    static var isRunning: Bool { !running.isEmpty }
 
     /// 请旧版正常退出（它会先把自己改过的屏幕还原）
     static func quit() {
-        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+        let apps = running
         for app in apps where !app.terminate() {
             Log.warn("请旧版 UU远程伴侣（pid \(app.processIdentifier)）退出没有成功")
         }
-        if !apps.isEmpty { Log.info("已请旧版 UU远程伴侣 退出") }
-    }
-
-    /// 每 0.5s 看一眼，旧版退出了或超时就回调
-    static func waitUntilGone(timeout: TimeInterval, then done: @escaping @MainActor () -> Void) {
-        guard isRunning, timeout > 0 else {
-            if isRunning { Log.warn("旧版 UU远程伴侣 还没退出，照常开始监控") }
-            return done()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            MainActor.assumeIsolated { waitUntilGone(timeout: timeout - 0.5, then: done) }
-        }
+        if !apps.isEmpty { Log.info("已请求旧版辅助工具退出") }
     }
 
     /// 旧版启动、退出时回调，参数是此刻它是否在运行
@@ -34,7 +30,7 @@ enum LegacyApp {
         return [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification].map { name in
             center.addObserver(forName: name, object: nil, queue: .main) { note in
                 let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-                guard app?.bundleIdentifier == bundleID else { return }
+                guard let id = app?.bundleIdentifier, conflictingIDs.contains(id) else { return }
                 MainActor.assumeIsolated { onChange(isRunning) }
             }
         }

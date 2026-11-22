@@ -49,6 +49,13 @@ final class CaptureLogWatcher {
         return (state.isActive(at: date), state.streamingDisplay(at: date))
     }
 
+    func confirmedCapture() -> (display: DisplayID, startedAt: Date)? {
+        guard isRunning, buffered == nil else { return nil }
+        noteServerProcess()
+        guard let serverPID, let capture = state.confirmedCapture, capture.processID == serverPID else { return nil }
+        return (capture.display, capture.startedAt)
+    }
+
     /// UURemoteServer 换了进程（或没了），旧的推流状态作废
     private func noteServerProcess() {
         let pid = UURemoteApp.serverPID()

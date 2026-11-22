@@ -44,7 +44,7 @@ struct StatusText: Equatable {
         }
         if states.contains(.preparing) { return "正在准备屏幕" }
         if states.contains(.failed) { return "有屏幕创建失败" }
-        if let remote = s.remoteName, states.contains(where: { $0.display != nil }) { return "在 \(remote) 中选择 Snug 的屏" }
+        if let remote = s.remoteName, states.contains(where: { $0.display != nil }) { return "在 \(remote) 中选择虚拟屏" }
         return s.desks.dismissed.isEmpty ? nil : "本次远程已退出这些屏"
     }
 }
@@ -97,7 +97,7 @@ extension ScreenshotNotice {
     var text: StatusText {
         switch self {
         case .cropped: StatusText(headline: "已复制选区", detail: nil)
-        case .needsPermission: StatusText(headline: "需要\(PermissionName.screenRecording)权限", detail: "请在 Mac 上的 Snug 设置中授权")
+        case .needsPermission: StatusText(headline: "需要\(PermissionName.screenRecording)权限", detail: "请在 Mac 上的 uumm 设置中授权")
         case .windowGone: StatusText(headline: "窗口已关闭", detail: "未截图")
         case .failed: StatusText(headline: "未能截图", detail: "请稍后再试")
         case .copyFailed: StatusText(headline: "未能写入剪贴板", detail: "请稍后再试")

@@ -10,6 +10,10 @@ public struct AppConfig: Codable, Equatable, Sendable {
     public var nextSerialBlock = 0
     /// 手机、平板屏上把远控发来的单指操作翻译成 iPhone 的手势
     public var gestures = true
+    /// 仅同步 UU 的纵向滚轮，默认关闭。
+    public var remoteWheelSync = false
+    public var autoSwitchPhone = false
+    public var autoSwitchPhoneName: String?
     /// 手机、平板屏底部小横条左边放相机键：截当前窗口到剪贴板。要另授「录屏与系统录音」权限，默认关
     public var screenshot = false
     /// 窗口放上手机、平板屏时，字号默认放大几级（每个 App 改过之后按它自己记住的级数）
@@ -84,6 +88,7 @@ public struct AppConfig: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case screens, mainScreen, nextSerialBlock, phoneScreen, gestures, screenshot, zoomSteps, phone, welcomed, updateSource, lastVersion
+        case remoteWheelSync, autoSwitchPhone, autoSwitchPhoneName
     }
 
     // 每一项都有默认值：以后加字段、或者手改漏了某项，都不会让整份配置被判为损坏
@@ -116,6 +121,9 @@ public struct AppConfig: Codable, Equatable, Sendable {
         mainScreen = (try? c.decodeIfPresent(ScreenID.self, forKey: .mainScreen)).flatMap { id in screens.contains { $0.id == id } ? id : nil }
         nextSerialBlock = ((try? c.decodeIfPresent(Int.self, forKey: .nextSerialBlock)) ?? 0).clamped(to: 0...Self.maxSerialBlock)
         gestures = try c.decodeIfPresent(Bool.self, forKey: .gestures) ?? d.gestures
+        remoteWheelSync = try c.decodeIfPresent(Bool.self, forKey: .remoteWheelSync) ?? d.remoteWheelSync
+        autoSwitchPhone = try c.decodeIfPresent(Bool.self, forKey: .autoSwitchPhone) ?? d.autoSwitchPhone
+        autoSwitchPhoneName = try c.decodeIfPresent(String.self, forKey: .autoSwitchPhoneName)
         screenshot = try c.decodeIfPresent(Bool.self, forKey: .screenshot) ?? d.screenshot
         zoomSteps = try c.decodeIfPresent(Int.self, forKey: .zoomSteps).map { $0.clamped(to: Self.zoomStepsRange) } ?? d.zoomSteps
         welcomed = try c.decodeIfPresent(Bool.self, forKey: .welcomed) ?? d.welcomed
@@ -145,6 +153,9 @@ extension AppConfig {
         try c.encode(legacy?.enabled ?? false, forKey: .phoneScreen)
         try c.encode(legacy?.device ?? .standard, forKey: .phone)
         try c.encode(gestures, forKey: .gestures)
+        try c.encode(remoteWheelSync, forKey: .remoteWheelSync)
+        try c.encode(autoSwitchPhone, forKey: .autoSwitchPhone)
+        try c.encodeIfPresent(autoSwitchPhoneName, forKey: .autoSwitchPhoneName)
         try c.encode(screenshot, forKey: .screenshot)
         try c.encode(zoomSteps, forKey: .zoomSteps)
         try c.encode(welcomed, forKey: .welcomed)

@@ -117,6 +117,9 @@ protocol AppIntents: AnyObject, Sendable {
     /// 设为主屏的那块（常驻）；nil 不改主屏
     func setMainScreen(_ id: ScreenID?)
     func setGestures(_ on: Bool)
+    func setRemoteWheelSync(_ on: Bool)
+    func setAutoSwitchPhone(_ on: Bool)
+    func setAutoSwitchPhoneName(_ name: String)
     func setZoomSteps(_ steps: Int)
     func setLaunchAtLogin(_ on: Bool)
     /// 开机启动待允许：直接打开系统设置的「登录项」

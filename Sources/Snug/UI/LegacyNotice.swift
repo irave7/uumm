@@ -12,8 +12,8 @@ struct LegacyNoticeView: View {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "exclamationmark.triangle.fill").font(.title).foregroundStyle(.orange)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("旧版「UU远程伴侣」运行中").font(.title3.bold())
-                    Text("与 Snug 同时运行将相互干扰")
+                    Text("旧版远控辅助工具正在运行").font(.title3.bold())
+                    Text("退出 Snug、UU远程伴侣及单独的滚轮和切屏工具后，uumm 才会开始监控。")
                         .fixedSize(horizontal: false, vertical: true)
                     Text("退出后自动还原 · 可从「应用程序」移除")
                         .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -21,8 +21,8 @@ struct LegacyNoticeView: View {
             }
             HStack {
                 Spacer()
-                Button("保留两者", action: keepBoth)
-                Button("退出旧版", action: quitLegacy).keyboardShortcut(.defaultAction)
+                Button("退出 uumm", action: keepBoth)
+                Button("退出旧工具", action: quitLegacy).keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)
@@ -36,22 +36,25 @@ final class LegacyNoticeWindowController {
     /// 提示挂着、还没定下来时才有；定下来（点了按钮，或旧版自己退了）只走一次
     private var decide: (@MainActor (Bool) -> Void)?
 
-    func show(quitLegacy: @escaping @MainActor () -> Void, proceed: @escaping @MainActor () -> Void) {
+    func show(quitLegacy: @escaping @MainActor () -> Void, quit: @escaping @MainActor () -> Void, proceed: @escaping @MainActor () -> Void) {
         guard window == nil else { return }
-        decide = { [weak self] quit in
+        decide = { [weak self] shouldQuitLegacy in
             guard let self, decide != nil else { return }
-            decide = nil
-            window?.close()
-            window = nil
-            guard quit else { return proceed() }
-            quitLegacy()
-            // 旧版退出前要先还原它改过的屏幕（最多约 8 秒），等它真走了再开始监控，免得两边同时改屏幕
-            LegacyApp.waitUntilGone(timeout: 12, then: proceed)
+            if shouldQuitLegacy {
+                quitLegacy()
+            } else if LegacyApp.isRunning {
+                quit()
+            } else {
+                decide = nil
+                window?.close()
+                window = nil
+                proceed()
+            }
         }
         let view = LegacyNoticeView(quitLegacy: { [weak self] in self?.decide?(true) },
                                     keepBoth: { [weak self] in self?.decide?(false) })
         let w = NSWindow(contentViewController: NSHostingController(rootView: view))
-        w.title = "Snug"
+        w.title = "uumm"
         w.styleMask = [.titled]
         w.isReleasedWhenClosed = false
         w.center()

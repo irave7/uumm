@@ -2,6 +2,7 @@
 // 每 0.5 秒一拍：适配器给出观测 → 会话层判断连没连、是不是同一次远程 → ScreenPlan 按配置算出要哪些屏，交给 DeskSet。
 // 要翻译手势的屏在时开手势翻译，范围跟着那几块屏走。全仓唯一写配置的地方；界面只读 state，意图见 AppController+Intents
 import AppKit
+import RemoteUUSystem
 import SnugCore
 import SnugSystem
 
@@ -14,7 +15,6 @@ final class AppController: Sendable {
     static let verifyInterval: TimeInterval = 2
 
     let state = AppState()
-    let updater: Updater
     let desks: DeskSet
     /// App 资源库的统一数据源（手机、平板屏和电脑屏的资源库共用）。界面碰得到的系统入口只有 desks 和它
     let catalog: AppCatalog
@@ -30,6 +30,8 @@ final class AppController: Sendable {
     private let remotes = Remotes.all.map { $0.adapter.init() }
     private var session = RemoteSession()
     private let touch: TouchTap
+    private let remoteWheel = RemoteWheelSync()
+    private let phoneSwitch: PhoneAutoSwitch
     private var watcher: DisplayWatcher?
     private var tickTimer: Timer?
     private var lastTickAt: Date?
@@ -44,6 +46,7 @@ final class AppController: Sendable {
         store = ConfigStore(url: paths.config)
         let devices = Self.loadDevices()
         let helper = Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])
+        phoneSwitch = PhoneAutoSwitch(paths: paths, helper: helper)
         let windows = WindowService()
         let apps = AppService()
         desks = DeskSet(displays: VirtualDisplayService(helper: helper), windows: windows, apps: apps,
@@ -54,7 +57,6 @@ final class AppController: Sendable {
         state.previewing = preview
         state.devices = devices
         state.accessibilityTrusted = AX.isTrusted
-        updater = Updater(state: state)
         AX.configureTimeout()
         // 选过的型号按机型库现在的数值来（机型库改过数值时跟着改），建屏前就定下来
         for screen in store.config.screens {
@@ -108,6 +110,7 @@ final class AppController: Sendable {
         watcher.start()
         self.watcher = watcher
         remotes.forEach { $0.start() }
+        if !preview { phoneSwitch.start() }
         if state.accessibilityTrusted { desks.recover() }
         let timer = Timer(timeInterval: Self.tickInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -126,6 +129,8 @@ final class AppController: Sendable {
         tickTimer?.invalidate()
         tickTimer = nil
         watcher?.stop()
+        remoteWheel.update(enabled: false)
+        phoneSwitch.stop()
         remotes.forEach { $0.stop() }
     }
 
@@ -138,9 +143,20 @@ final class AppController: Sendable {
         }
         lastTickAt = now
         refreshTrust()
+        remoteWheel.update(enabled: !preview && store.config.remoteWheelSync && state.accessibilityTrusted)
         screenshots.expire()
         let wallClock = Date()
-        handle(session.update(remotes.map { RemoteReading(remote: $0.identity, observation: $0.sample(wallClock: wallClock)) }, now: now))
+        let transitions = session.update(remotes.map { RemoteReading(remote: $0.identity, observation: $0.sample(wallClock: wallClock)) }, now: now)
+        handle(transitions)
+        if !preview {
+            let config = store.config
+            let phoneScreens = config.screens.filter { $0.enabled && $0.orientation == .portrait && $0.device.kind == .phone }
+            let target = config.mainScreen == nil && phoneScreens.count == 1
+                ? state.desks.desks[phoneScreens[0].id]?.display : nil
+            let name = config.autoSwitchPhone && state.accessibilityTrusted ? config.autoSwitchPhoneName : nil
+            phoneSwitch.observe(adapter: remotes.compactMap { $0 as? UURemoteAdapter }.first,
+                                registeredPhone: name, target: target, transitions: transitions)
+        }
         keepPointerOffSnugScreens()
         if now.timeIntervalSince(lastVerifyAt) >= Self.verifyInterval {
             lastVerifyAt = now

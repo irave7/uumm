@@ -126,7 +126,8 @@ enum RenderSamples {
             return switch tab {
             case .screens: AnyView(ScreensPage(state: s, intents: stub, navigation: stub))
             case .touch: AnyView(TouchPage(state: s, intents: stub))
-            case .general: AnyView(GeneralPage(state: s, intents: stub, navigation: stub))
+            case .general: AnyView(GeneralPage(state: s, intents: stub))
+            case .optimization: AnyView(RemoteOptimizationPage(state: s, intents: stub))
             }
         }
     }
@@ -205,7 +206,7 @@ enum RenderSamples {
             RenderSample(name: name, dark: dark) {
                 let s = sampleState()
                 configure(&s.update)
-                return AnyView(GeneralPage(state: s, intents: stub, navigation: stub))
+                return AnyView(GeneralPage(state: s, intents: stub))
             }
         }
     }

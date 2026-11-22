@@ -4,6 +4,10 @@ import AppKit
 import SnugCore
 import SnugSystem
 
+if let status = PhoneAutoSwitchWorker.run(arguments: Array(CommandLine.arguments.dropFirst())) {
+    exit(status)
+}
+
 let mode: LaunchMode
 do {
     mode = try LaunchMode.parse(Array(CommandLine.arguments.dropFirst()))

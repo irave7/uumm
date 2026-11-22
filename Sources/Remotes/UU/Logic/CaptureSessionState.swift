@@ -21,6 +21,8 @@ package struct CaptureSessionState: Sendable {
     private var pendingEndAt: Date?
     private var lastDescribed: DisplayID?
     private var captured: DisplayID?
+    private var captureStartedAt: Date?
+    private var captureProcessID: pid_t?
     /// 上次推流开始之后见过终止：没见过就是紧跟着起的第二路，不改 captured
     private var stoppedSinceStart = true
 
@@ -32,7 +34,11 @@ package struct CaptureSessionState: Sendable {
         case .displayDescribed(let id):
             lastDescribed = id
         case .captureStarted:
-            if !active || stoppedSinceStart { captured = lastDescribed }
+            if !active || stoppedSinceStart {
+                captured = lastDescribed
+                captureStartedAt = record.date
+                captureProcessID = record.processID
+            }
             stoppedSinceStart = false
             active = true
             pendingEndAt = nil
@@ -57,6 +63,12 @@ package struct CaptureSessionState: Sendable {
         isActive(at: now) ? captured : nil
     }
 
+    /// A confirmed primary stream, without the disconnect grace used by the rest of Snug.
+    package var confirmedCapture: (display: DisplayID, startedAt: Date, processID: pid_t?)? {
+        guard active, !stoppedSinceStart, let captured, let captureStartedAt else { return nil }
+        return (captured, captureStartedAt, captureProcessID)
+    }
+
     /// 日志监听（重新）启动时：先按时间回放启动前的日志（UU 的常驻推流只在远程开头打一次「开始」，不回放就以为没在推），
     /// 再接上启动后收到的；两段重叠的部分按时间去掉。
     /// 启动前的日志只认 server（此刻的 UURemoteServer 进程）打的：进程崩溃时不留停流日志，上一个进程的「开始」
@@ -75,6 +87,8 @@ package struct CaptureSessionState: Sendable {
             active = false
             pendingEndAt = nil
             captured = nil
+            captureStartedAt = nil
+            captureProcessID = nil
             stoppedSinceStart = true
         }
     }

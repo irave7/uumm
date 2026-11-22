@@ -179,10 +179,16 @@ struct CaptureLogTests {
         s.apply(CaptureLogRecord(date: d.addingTimeInterval(0.2), event: .displayDescribed(1)))
         s.apply(CaptureLogRecord(date: d.addingTimeInterval(0.3), event: .captureStarted))   // 第二路
         #expect(s.streamingDisplay(at: d.addingTimeInterval(4)) == 79)
+        #expect(s.confirmedCapture?.display == 79)
+        #expect(s.confirmedCapture?.startedAt == d.addingTimeInterval(0.1))
         s.apply(CaptureLogRecord(date: d.addingTimeInterval(5), event: .captureStopped))     // 用户切屏
+        #expect(s.isActive(at: d.addingTimeInterval(5.01)))
+        #expect(s.confirmedCapture == nil)
         s.apply(CaptureLogRecord(date: d.addingTimeInterval(5.04), event: .displayDescribed(5)))
         s.apply(CaptureLogRecord(date: d.addingTimeInterval(5.05), event: .captureStarted))
         #expect(s.streamingDisplay(at: d.addingTimeInterval(6)) == 5)
+        #expect(s.confirmedCapture?.display == 5)
+        #expect(s.confirmedCapture?.startedAt == d.addingTimeInterval(5.05))
     }
 
     @Test("换手接管（V12）：前一台的两路停掉 0.6～0.7 秒后新的一台起推流，一直算推流中；新的一台推的是它开推前描述的屏（主屏）")

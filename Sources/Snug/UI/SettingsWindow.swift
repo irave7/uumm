@@ -215,7 +215,7 @@ private struct Issue: Identifiable {
     static func all(_ state: AppState, _ intents: any AppIntents) -> [Issue] {
         var list: [Issue] = []
         if state.legacyAppRunning {
-            list.append(Issue(id: "legacy", text: StatusText(headline: "旧版「UU远程伴侣」运行中", detail: "与 Snug 同时运行将相互干扰"),
+            list.append(Issue(id: "legacy", text: StatusText(headline: "旧版远控辅助工具正在运行", detail: "退出旧工具后可使用 uumm"),
                               action: .run("退出旧版", intents.quitLegacyApp)))
         }
         if let issue = state.loginItemIssue {
@@ -313,10 +313,51 @@ private struct ZoomSlider: View {
 
 // MARK: 通用
 
+struct RemoteOptimizationPage: View {
+    let state: AppState
+    let intents: any AppIntents
+    @State private var phoneName = ""
+
+    var body: some View {
+        Form {
+            Section("Windows 远控 Mac") {
+                Toggle("同步纵向滚轮", isOn: Binding(get: { state.config.remoteWheelSync }, set: { intents.setRemoteWheelSync($0) }))
+                Text("读取 Mac 的 LinearMouse 设置，校正 UU 发来的纵向滚轮。").foregroundStyle(.secondary)
+            }
+            Section("手机远控") {
+                Toggle("自动切屏", isOn: Binding(get: { state.config.autoSwitchPhone }, set: { intents.setAutoSwitchPhone($0) }))
+                LabeledContent("手机在 UU 中的设备名称") {
+                    HStack {
+                        TextField("设备名称", text: $phoneName)
+                            .labelsHidden()
+                            .onSubmit(savePhoneName)
+                        Button("保存", action: savePhoneName)
+                            .disabled(phoneName == (state.config.autoSwitchPhoneName ?? "") || phoneName.count > 128)
+                    }
+                }
+                if state.controllers.count == 1, let connected = state.controllers.first, !connected.isEmpty {
+                    Button("填入当前控制端名称") { phoneName = connected }
+                }
+                Text("填入手机在 UU「本机被控中」显示的完整名称。启用一块竖屏手机屏，并将「设为主屏」选为「不改」。切换时 Mac 原屏会短暂熄灭，然后自动恢复。")
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .formStyle(.grouped)
+        .frame(width: MacTokens.Size.settingsWidth)
+        .fixedSize(horizontal: false, vertical: true)
+        .onAppear { phoneName = state.config.autoSwitchPhoneName ?? "" }
+    }
+
+    private func savePhoneName() {
+        intents.setAutoSwitchPhoneName(phoneName)
+        phoneName = state.config.autoSwitchPhoneName ?? ""
+    }
+}
+
 struct GeneralPage: View {
     let state: AppState
     let intents: any AppIntents
-    let navigation: any Navigation
 
     var body: some View {
         Form {
@@ -337,12 +378,14 @@ struct GeneralPage: View {
                     SettingLabel.screenRecording
                 }
             }
-            UpdateSection(state: state, intents: intents, navigation: navigation)
+            Section {
+                Link("GitHub Releases", destination: URL(string: "https://github.com/irave7/uumm/releases")!)
+            }
             Section {
             } footer: {
                 HStack {
                     Spacer()
-                    Button("退出 Snug") { intents.quit() }
+                    Button("退出 uumm") { intents.quit() }
                         .help("还原窗口后退出")
                 }
             }
@@ -360,12 +403,13 @@ struct GeneralPage: View {
 @MainActor
 final class SettingsWindowController {
     enum Tab: Int, CaseIterable {
-        case screens, touch, general
+        case screens, touch, optimization, general
 
         var title: String {
             switch self {
             case .screens: "屏幕"
             case .touch: "触控"
+            case .optimization: "UU 优化"
             case .general: "通用"
             }
         }
@@ -374,6 +418,7 @@ final class SettingsWindowController {
             switch self {
             case .screens: "rectangle.on.rectangle"
             case .touch: "hand.point.up.left"
+            case .optimization: "switch.2"
             case .general: "gearshape"
             }
         }
@@ -400,7 +445,8 @@ final class SettingsWindowController {
                 let view: AnyView = switch tab {
                 case .screens: AnyView(ScreensPage(state: state, intents: intents, navigation: navigation))
                 case .touch: AnyView(TouchPage(state: state, intents: intents))
-                case .general: AnyView(GeneralPage(state: state, intents: intents, navigation: navigation))
+                case .optimization: AnyView(RemoteOptimizationPage(state: state, intents: intents))
+                case .general: AnyView(GeneralPage(state: state, intents: intents))
                 }
                 tabs.addTabViewItem(Self.item(tab, view))
             }

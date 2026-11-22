@@ -13,8 +13,22 @@ struct PersistenceTests {
         #expect(p.placedRecord(for: ScreenID("abc")).path == "/d/placed/abc.json")
         #expect(p.legacyPlacedRecord.path == "/d/phone-screen.json")
         #expect(p.zoomBook.path == "/d/zoom.json")
-        #expect(SnugPaths.standard.dataDirectory.path.hasSuffix("Library/Application Support/Snug"))
-        #expect(SnugPaths.standard.logFile.path.hasSuffix("Library/Logs/Snug.log"))
+        #expect(SnugPaths.standard.dataDirectory.path.hasSuffix("Library/Application Support/uumm"))
+        #expect(SnugPaths.standard.logFile.path.hasSuffix("Library/Logs/uumm.log"))
+    }
+
+    @Test("旧设置默认关闭 UU 优化，新设置可保存和读取")
+    func remoteOptimizationSettings() throws {
+        let old = try JSONDecoder().decode(AppConfig.self, from: Data("{}".utf8))
+        #expect(!old.remoteWheelSync)
+        #expect(!old.autoSwitchPhone)
+        #expect(old.autoSwitchPhoneName == nil)
+        var current = old
+        current.remoteWheelSync = true
+        current.autoSwitchPhone = true
+        current.autoSwitchPhoneName = "测试手机"
+        let encoded = try JSONEncoder().encode(current)
+        #expect(try JSONDecoder().decode(AppConfig.self, from: encoded) == current)
     }
 
     @Test("JSONFile.load 区分不存在 / 损坏 / 成功")
